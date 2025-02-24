@@ -1,5 +1,5 @@
-use crate::http::Request;
-use std::{fmt::Result, io::Read, net::TcpListener};
+use crate::http::{response, Request, Response, StatusCode};
+use std::{fmt::Result, io::{Read, Write}, net::TcpListener};
 pub struct Server {
     addr: String,
 }
@@ -20,13 +20,18 @@ impl Server {
                     match stream.read(&mut buf) {
                         Ok(_) => {
                             println!("Request Recieved: {}", String::from_utf8_lossy(&buf));
-                            match Request::try_from(&buf[..]) {
+                            let response = match Request::try_from(&buf[..]) {
                                 Ok(request) => {
                                     dbg!(request);
+                                    Response::new(StatusCode::Ok, Some("<h1>It worked</h1>".to_string()))
                                 }
                                 Err(e) => {
-                                    println!("Failed to parse the request : {}", e)
+                                    println!("Failed to parse the request : {}", e);
+                                    Response::new(StatusCode::BadRequest, None)
                                 }
+                            };
+                            if let Err(e) = response.send(&mut stream){
+                                println!("Failed to send response: {}", e);
                             }
                         }
                         Err(e) => {
